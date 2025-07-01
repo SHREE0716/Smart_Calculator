@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen px-4">
+
+  <div class="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-center mb-6 text-indigo-600">🧮 Smart Calculator</h1>
+
+    <!-- ✅ NO FORM TAG HERE -->
+    <div id="calculator" class="flex flex-col gap-4">
+      <input type="number" id="num1" placeholder="Enter number 1"
+             class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+
+      <input type="number" id="num2" placeholder="Enter number 2"
+             class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+
+      <select id="operation" class="border border-gray-300 rounded-lg px-4 py-2">
+        <option value="add">➕ Add</option>
+        <option value="subtract">➖ Subtract</option>
+        <option value="multiply">✖ Multiply</option>
+        <option value="divide">➗ Divide</option>
+      </select>
+
+      <div class="flex flex-row gap-4 items-center">
+        <button id="calcBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition duration-200">
+          🔍 Calculate
+        </button>
+
+        <input type="text" id="inlineResult" readonly
+               class="border border-green-400 text-green-700 bg-green-100 rounded-md px-4 py-2 w-full"
+               placeholder="Result will appear here">
+      </div>
+
+      <h2 id="result" class="text-xl font-semibold text-center text-green-600">Result: </h2>
+
+      <button id="toggleBtn" class="bg-gray-700 text-white rounded-md py-2 px-4 mt-2 hover:bg-gray-800">
+        📜 Show History
+      </button>
+    </div>
+  </div>
+
+  <!-- Hidden History -->
+  <div id="historySection" class="mt-10 w-full max-w-2xl hidden">
+    <h3 class="text-lg font-bold mb-2 text-gray-800">📜 Calculation History</h3>
+    <table class="w-full text-left border border-gray-200 shadow-sm rounded-md overflow-hidden">
+      <thead class="bg-gray-200 text-sm text-gray-700">
+        <tr>
+          <th class="p-2">ID</th>
+          <th class="p-2">Num1</th>
+          <th class="p-2">Num2</th>
+          <th class="p-2">Op</th>
+          <th class="p-2">Result</th>
+        </tr>
+      </thead>
+      <tbody id="historyTable" class="text-sm bg-white divide-y divide-gray-100">
+        <!-- rows added dynamically -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    document.getElementById("calcBtn").addEventListener("click", async (event) => {
+      event.preventDefault(); // 🛑 stop any form-like default behavior
+
+      const num1 = parseFloat(document.getElementById("num1").value);
+      const num2 = parseFloat(document.getElementById("num2").value);
+      const operation = document.getElementById("operation").value;
+
+      if (isNaN(num1) || isNaN(num2)) {
+        alert("Please enter both numbers.");
+        return;
+      }
+
+      const res = await fetch("http://localhost:8000/calculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ num1, num2, operation }),
+      });
+
+      const data = await res.json();
+      document.getElementById("result").innerText = "Result: " + data.result;
+      document.getElementById("inlineResult").value = data.result;
+
+      if (!document.getElementById("historySection").classList.contains("hidden")) {
+        loadHistory();
+      }
+    });
+
+    document.getElementById("toggleBtn").addEventListener("click", () => {
+      const section = document.getElementById("historySection");
+      const button = document.getElementById("toggleBtn");
+
+      if (section.classList.contains("hidden")) {
+        section.classList.remove("hidden");
+        button.innerText = "📕 Hide History";
+        loadHistory();
+      } else {
+        section.classList.add("hidden");
+        button.innerText = "📜 Show History";
+      }
+    });
+
+    async function loadHistory() {
+      const res = await fetch("http://localhost:8000/history");
+      const data = await res.json();
+      const tbody = document.getElementById("historyTable");
+      tbody.innerHTML = "";
+
+      data.history.forEach((row) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="p-2">${row.id}</td>
+          <td class="p-2">${row.num1}</td>
+          <td class="p-2">${row.num2}</td>
+          <td class="p-2">${row.operation}</td>
+          <td class="p-2">${row.result}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>
